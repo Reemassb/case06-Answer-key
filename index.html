@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teacher Key \u2014 Case #06 The Wrong Orbit</title>
+<style>
+:root{--ink:#0d1117;--ink2:#131a24;--ink3:#1a2430;--amb:#e8a33d;--chalk:#e9e7e2;
+      --chalk-dim:#9aa3ad;--ok:#5fb87a;--no:#d1604f;--rule:#26313d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ink);color:var(--chalk);
+  font:15px/1.6 "Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:32px 22px 90px}
+h1{font-size:24px;margin:0}
+.caseno{font:600 12px/1 "Helvetica Neue",Arial,sans-serif;letter-spacing:.22em;color:#a8762c;margin-bottom:8px}
+.lede{color:var(--chalk-dim);max-width:70ch;margin:14px 0 26px}
+textarea{width:100%;min-height:130px;background:var(--ink2);border:1px solid var(--rule);
+  color:var(--chalk);border-radius:2px;padding:13px;font:15px/1.7 inherit;resize:vertical}
+textarea:focus{border-color:var(--amb);outline:none}
+.btn{background:var(--amb);color:#17120a;border:0;border-radius:2px;padding:12px 24px;
+  font-size:15px;font-weight:700;cursor:pointer;margin-top:12px}
+.btn.ghost{background:transparent;color:var(--chalk-dim);border:1px solid var(--rule)}
+.team{background:var(--ink2);border:1px solid var(--rule);border-radius:3px;margin:20px 0;
+  overflow:hidden;break-inside:avoid;page-break-inside:avoid}
+.thead{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+  padding:14px 18px;border-bottom:1px solid var(--rule);background:var(--ink3)}
+.tname{font-weight:700;font-size:17px;letter-spacing:.06em}
+.dest{font:600 12px/1 "Helvetica Neue",Arial,sans-serif;letter-spacing:.14em;color:var(--amb)}
+.verdict{font-weight:700;font-size:12.5px;letter-spacing:.08em;padding:5px 12px;border-radius:2px}
+.verdict.ok{background:rgba(95,184,122,.16);color:var(--ok);border:1px solid rgba(95,184,122,.4)}
+.verdict.no{background:rgba(209,96,79,.16);color:var(--no);border:1px solid rgba(209,96,79,.4)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:0}
+.col{padding:16px 18px;border-right:1px solid var(--rule)}
+.col:last-child{border-right:0}
+h4{margin:0 0 10px;font-size:11.5px;letter-spacing:.14em;color:var(--amb);font-weight:700}
+.row{display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px dotted #202b36}
+.row:last-child{border-bottom:0}
+.row span:first-child{color:var(--chalk-dim)}
+.row span:last-child{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.note{padding:12px 18px;border-top:1px solid var(--rule);color:var(--chalk-dim);font-size:13.5px;line-height:1.6}
+@media print{
+  body{background:#fff;color:#000}.noprint{display:none}
+  .team,.col,.thead{background:#fff;border-color:#bbb}
+  h4,.dest{color:#7a5410}.row span:first-child{color:#555}
+  .verdict.ok{color:#1d6b36;border-color:#1d6b36;background:#fff}
+  .verdict.no{color:#a32b18;border-color:#a32b18;background:#fff}
+  .note{color:#444}
+}
+</style></head><body><div class="wrap">
+  <div class="caseno">EVIDENCE &amp; EQUATIONS &nbsp;\u00b7&nbsp; CASE #06</div>
+  <h1>The Wrong Orbit \u2014 Teacher Answer Key</h1>
+  <p class="lede">Paste your team names, one per line, exactly as students typed them. Spacing, case and punctuation are ignored. Each team is assigned one of three destinations, so check the destination line before comparing any figure.</p>
+  <div class="noprint">
+    <textarea id="names" placeholder="KEPLER&#10;APOGEE&#10;TRANSIT&#10;NADIR"></textarea>
+    <div><button class="btn" id="go">Generate key</button>
+    <button class="btn ghost" id="pr">Print / save as PDF</button></div>
+  </div>
+  <div id="out"></div>
+</div>
+<script>
+/* ===================== PHYSICS CORE ===================== */
+/* A satellite went silent. Ground tracking gives one hard number: the
+   observed orbital period. Everything else is reconstructed from it.   */
+(function (root) {
+  'use strict';
+  var BODIES = [
+    { name:'Earth', GM:3.986e14, R:6371, hLo:420, hHi:2200, floor:320 },
+    { name:'the Moon', GM:4.905e12, R:1737, hLo:90,  hHi:900, floor:55  },
+    { name:'Mars', GM:4.283e13, R:3390, hLo:220, hHi:1800, floor:150 }
+  ];
+  var TOL = 0.03, DIFF_LOW = 0.50, DIFF_HIGH = 1.20, TRACK_RES = 0.05;
+
+  function normalizeTeam(n){ return String(n||'').toUpperCase().replace(/[^A-Z0-9]/g,''); }
+  function xmur3(str){var h=1779033703^str.length;for(var i=0;i<str.length;i++){
+    h=Math.imul(h^str.charCodeAt(i),3432918353);h=(h<<13)|(h>>>19);}
+    return function(){h=Math.imul(h^(h>>>16),2246822507);h=Math.imul(h^(h>>>13),3266489909);
+      h^=h>>>16;return h>>>0;};}
+  function mulberry32(a){return function(){a|=0;a=(a+0x6D2B79F5)|0;
+    var t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;
+    return((t^(t>>>14))>>>0)/4294967296;};}
+  function makeRng(t){var s=xmur3('E&E::CASE06::MISSINGSATELLITE::'+normalizeTeam(t));s();
+    return mulberry32(s());}
+  function rr(r,a,b){return a+r()*(b-a);}
+  function rstep(r,a,b,s){var n=Math.floor((b-a)/s)+1;return round(a+Math.floor(r()*n)*s,6);}
+  function round(v,d){var f=Math.pow(10,d);return Math.round(v*f)/f;}
+
+  function periodOf(r_km, GM){
+    var r = r_km*1000;
+    return 2*Math.PI*Math.sqrt(r*r*r/GM);
+  }
+
+  function generate(teamName){
+    var rng = makeRng(teamName);
+
+    var body = BODIES[Math.floor(rng()*BODIES.length)];
+    var GM = body.GM, R_E = body.R;
+
+    var h_target = rstep(rng, body.hLo, body.hHi, 5);
+    var m_sat    = rstep(rng, 180, 1400, 10);
+    var r_target = R_E + h_target;
+    var T_target = periodOf(r_target, GM);
+
+    var achieved = rng() < 0.5;
+    var r_true, shortfall;
+    if (achieved) { r_true = r_target; shortfall = 0; }
+    else {
+      var want = r_target * rr(rng, 0.013, 0.040);
+      var cap  = h_target - body.floor;
+      var min  = r_target * 0.010;
+      shortfall = round(Math.max(min, Math.min(want, cap)), 1);
+      r_true = r_target - shortfall;
+    }
+
+    var T_true = periodOf(r_true, GM);
+    var T_obs  = round(T_true*(1+rr(rng,-0.0012,0.0012))/60, 2);
+    var v_true = Math.sqrt(GM/(r_true*1000));
+    var v_radar= round(v_true*(1+rr(rng,-0.0012,0.0012)), 1);
+
+    var a_r_target = r_target;
+    var a_v_target = Math.sqrt(GM/(r_target*1000));
+    var a_T_target = T_target/60;
+    var Ts = T_obs*60;
+    var a_r_actual = Math.cbrt(GM*Ts*Ts/(4*Math.PI*Math.PI))/1000;
+    var a_h_actual = a_r_actual - R_E;
+    var a_v_actual = 2*Math.PI*a_r_actual*1000/Ts;
+    var a_xcheck   = Math.abs(a_v_actual-v_radar)/v_radar*100;
+    var a_diff     = Math.abs(a_T_target-T_obs)/a_T_target*100;
+
+    return {
+      team:normalizeTeam(teamName), teamDisplay:String(teamName||'').trim(),
+      given:{body:body.name, h_target:h_target, R_E:R_E, GM:GM,
+             T_obs:T_obs, m_sat:m_sat, track_res:TRACK_RES},
+      sealed:{v_radar:v_radar},
+      answers:{r_target:a_r_target, v_target:a_v_target, T_target:a_T_target,
+               r_actual:a_r_actual, h_actual:a_h_actual, xcheck:a_xcheck, diff:a_diff},
+      verdict: a_diff <= DIFF_LOW ? 'ORBIT AS DECLARED' : 'ORBIT NOT ACHIEVED',
+      truth:{achieved:achieved, shortfall:shortfall,
+             altDrop:h_target-a_h_actual, r_true:r_true, v_true:v_true,
+             v_faster_by:Math.sqrt(GM/(r_true*1000))-Math.sqrt(GM/(r_target*1000)),
+             withinResolution:a_diff <= TRACK_RES*3,
+             bodyFloor:body.floor,
+             v_actual:a_v_actual}
+    };
+  }
+  root.EE06={generate:generate, normalizeTeam:normalizeTeam, periodOf:periodOf,
+             BODIES:BODIES, TOL:TOL, DIFF_LOW:DIFF_LOW, DIFF_HIGH:DIFF_HIGH, TRACK_RES:TRACK_RES};
+})(window);
+
+/* ===================== APP ===================== */
+(function(){
+var $=function(s){return document.querySelector(s);};
+function f(v,d){return Number(v).toFixed(d);}
+function gmText(GM){
+  if(Math.abs(GM-3.986e14)<1e9) return '3.986\u00d710\u00b9\u2074';
+  if(Math.abs(GM-4.283e13)<1e9) return '4.283\u00d710\u00b9\u00b3';
+  return '4.905\u00d710\u00b9\u00b2';
+}
+function card(R){
+  var g=R.given,a=R.answers,t=R.truth;
+  var missed=R.verdict==='ORBIT NOT ACHIEVED';
+  function row(k,v){return '<div class="row"><span>'+k+'</span><span>'+v+'</span></div>';}
+  return '<div class="team">'
+  +'<div class="thead"><div><div class="tname">'+R.team+'</div>'
+  +'<div class="dest">MISSION TO '+g.body.toUpperCase()+'</div></div>'
+  +'<div class="verdict '+(missed?'no':'ok')+'">'
+  +(missed?'TARGET ORBIT NOT ACHIEVED':'TARGET ORBIT ACHIEVED')+'</div></div>'
+  +'<div class="cols">'
+  +'<div class="col"><h4>EVIDENCE GIVEN</h4>'
+  + row('Destination', g.body) + row('Body radius', g.R_E+' km')
+  + row('GM', gmText(g.GM)+' m\u00b3/s\u00b2')
+  + row('Declared altitude', g.h_target+' km')
+  + row('Observed period', f(g.T_obs,2)+' min')
+  + row('Tracking resolution', '\u00b1'+f(g.track_res,2)+' %')
+  + row('Sealed radar', f(R.sealed.v_radar,1)+' m/s')
+  +'</div>'
+  +'<div class="col"><h4>STAGE ANSWERS</h4>'
+  + row('1 \u00b7 Declared radius', f(a.r_target,0)+' km')
+  + row('2 \u00b7 Declared speed', f(a.v_target,0)+' m/s')
+  + row('3 \u00b7 Declared period', f(a.T_target,2)+' min')
+  + row('4 \u00b7 Actual radius', f(a.r_actual,0)+' km')
+  + row('5 \u00b7 Actual altitude', f(a.h_actual,0)+' km')
+  + row('6 \u00b7 Cross-check', f(a.xcheck,2)+' % (\u00b10.15)')
+  + row('7 \u00b7 Period difference', f(a.diff,2)+' % (\u00b10.05)')
+  +'</div>'
+  +'<div class="col"><h4>WHAT ACTUALLY HAPPENED</h4>'
+  + row('Orbit achieved?', t.achieved?'YES':'NO')
+  + row('Altitude shortfall', missed?f(t.altDrop,0)+' km':'\u2014')
+  + row('Actual orbital speed', f(t.v_actual,0)+' m/s')
+  + row('Faster than declared by', missed?'+'+f(t.v_faster_by,0)+' m/s':'0 m/s')
+  + row('Gate answer', missed?'FASTER':'THE SAME')
+  + row('Period shorter by', missed?f(a.T_target-g.T_obs,2)+' min':'\u2014')
+  +'</div></div>'
+  +'<div class="note">'
+  + (missed
+     ? 'Period difference <strong>'+f(a.diff,2)+'%</strong> against a quoted resolution of \u00b1'
+       +f(g.track_res,2)+'% \u2014 unambiguous. The satellite sits '+f(t.altDrop,0)
+       +' km low, and therefore travels <strong>'+f(t.v_faster_by,0)
+       +' m/s faster</strong> than the declared orbit. Students who answer SLOWER at the interpretation gate have inverted v = \u221a(GM/r); this is the single most valuable teaching moment in the case.'
+     : 'Period difference <strong>'+f(a.diff,2)+'%</strong>, inside the quoted \u00b1'
+       +f(g.track_res,2)+'% resolution. The orbit is as contracted, so the correct gate answer is THE SAME and the fault lies aboard the spacecraft \u2014 which this evidence does not diagnose. Watch for students who claim the launch is exonerated of everything.')
+  + ' Stage 1 trap: '+g.h_target+' km is the altitude, '+f(a.r_target,0)+' km is the radius.'
+  +'</div></div>';
+}
+$('#go').addEventListener('click',function(){
+  var names=$('#names').value.split(/\n/).map(function(s){return s.trim();})
+    .filter(function(s){return EE06.normalizeTeam(s).length>=3;});
+  if(!names.length){$('#out').innerHTML='<p style="color:#d1604f">Enter at least one team name of three or more characters.</p>';return;}
+  var seen={},uniq=[];
+  names.forEach(function(x){var k=EE06.normalizeTeam(x);if(!seen[k]){seen[k]=1;uniq.push(x);}});
+  var rs=uniq.map(function(x){return EE06.generate(x);});
+  var nm=rs.filter(function(r){return r.verdict==='ORBIT NOT ACHIEVED';}).length;
+  var by={};rs.forEach(function(r){by[r.given.body]=(by[r.given.body]||0)+1;});
+  var dest=Object.keys(by).map(function(k){return by[k]+' '+k;}).join(' \u00b7 ');
+  $('#out').innerHTML='<p class="lede" style="margin-top:26px">'+rs.length+' teams \u00b7 '
+    +nm+' orbit not achieved \u00b7 '+(rs.length-nm)+' achieved<br>Destinations: '+dest+'</p>'
+    +rs.map(card).join('');
+});
+$('#pr').addEventListener('click',function(){window.print();});
+})();
+</script></body></html>
